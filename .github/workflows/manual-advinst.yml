@@ -25,12 +25,40 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v2
 
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
+      - name: Download Advanced Installer v18.2
         run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+          curl -O "https://www.advancedinstaller.com/downloads/18.2/advinst.msi"
+
+      - name: Install Advanced Installer v18.2
+        run: |
+          msiexec.exe /l*v "advinst.log" /qn /i "advinst.msi"
+          sleep 20
+          Remove-Item "advinst.msi"
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "install_log"
+          path: "advinst.log"
+
+      - name: Add to PATH
+        run: |
+          echo "C:\Program Files (x86)\Caphyon\Advanced Installer 18.2\bin\x86" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          echo $env:PATH
+
+      - name: Register Advanced Installer
+        run: |
+          & "AdvancedInstaller.com" /register ${{ secrets.ADVINST_LICENSE }}
+
+      - name: Build MSI
+        run: |
+          sleep 2
+          & "AdvancedInstaller.com" /build myproj.aip
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: "myproj_msi"
+          path: "myproj-SetupFiles/myproj.msi"
+
+      - name: Unregister Advanced Installer v18.2
+        run: |
+          Remove-Item -Force "C:\ProgramData\Caphyon\Advanced Installer\license80.dat"
